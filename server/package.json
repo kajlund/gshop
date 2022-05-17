@@ -1,0 +1,40 @@
+{
+  "name": "gshop",
+  "version": "1.0.0",
+  "description": "gShop is a demo shop web application with a REST server implemented using a SQL database plus Express.js and a SPA client implemented using Svelte.js",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon ./src/index",
+    "start": "node ./src/index",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "date-fns": "^2.28.0",
+    "dotenv": "^16.0.1",
+    "express": "^4.18.1",
+    "express-async-errors": "^3.1.1",
+    "http-status-codes": "^2.2.0",
+    "jsonwebtoken": "^8.5.1",
+    "knex": "^2.0.0",
+    "nanoid": "^3.3.4",
+    "nodemailer": "^6.7.5",
+    "pino": "^7.11.0",
+    "pino-http": "^7.0.0",
+    "pino-pretty": "^7.6.1",
+    "validator": "^13.7.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.15.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-prettier": "^4.0.0",
+    "nodemon": "^2.0.16",
+    "prettier": "^2.6.2",
+    "sqlite3": "^5.0.8"
+  }
+}
