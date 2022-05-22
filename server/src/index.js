@@ -10,18 +10,15 @@ const http = require('http')
 const util = require('util')
 
 const config = require('./config')
-const knexConfig = require('./db/knexfile')
+
 const log = require('./utils/log')
 const App = require('./app')
 
-async function startServer() {
-  /* Connect to Database(s) */
-  const dbConfig = knexConfig[process.env.NODE_ENV || 'development']
-  log.info(dbConfig)
-  const knex = require('knex')(dbConfig)
+const db = require('./db')
 
+async function startServer() {
   /* Get configured app */
-  const app = App(config, knex)
+  const app = App(config, db)
 
   /* Create HTTP Server */
   const server = http.createServer(app)
