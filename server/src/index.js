@@ -9,16 +9,16 @@
 const http = require('http')
 const util = require('util')
 
-const config = require('./config')
+const cnf = require('./config')
+const log = require('./utils/logger')(cnf.log)
 
-const log = require('./utils/log')
 const App = require('./app')
 
 const db = require('./db')
 
 async function startServer() {
   /* Get configured app */
-  const app = App(config, db)
+  const app = App(cnf, db)
 
   /* Create HTTP Server */
   const server = http.createServer(app)
@@ -34,7 +34,7 @@ async function startServer() {
       throw error
     }
 
-    const bind = typeof config.PORT === 'string' ? `Pipe ${app.get('port')}` : `Port  ${app.get('port')}`
+    const bind = typeof cnf.PORT === 'string' ? `Pipe ${app.get('port')}` : `Port  ${app.get('port')}`
 
     // handle specific listen errors with friendly messages
     switch (error.code) {
@@ -50,7 +50,7 @@ async function startServer() {
   })
 
   /* Start server */
-  server.listen(config.port)
+  server.listen(cnf.port)
 }
 
 process.on('uncaughtException', (err) => {

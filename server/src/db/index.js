@@ -1,9 +1,9 @@
-const log = require('../utils/log')
+const log = require('../utils/logger')()
 
 const knexConfig = require('./knexfile')
 const dbConfig = knexConfig[process.env.NODE_ENV || 'development']
 
-log.info(dbConfig, 'Database configuration:')
+log.info('Database configuration:', dbConfig)
 
 const knex = require('knex')(dbConfig)
 

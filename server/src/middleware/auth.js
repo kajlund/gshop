@@ -1,16 +1,14 @@
-const log = require('../utils/log')
-const { verify } = require('jsonwebtoken')
-const { StatusCodes, getReasonPhrase } = require('http-status-codes')
-
 const { getUserById } = require('../api/user/user.service')
-const { getAppError } = require('../utils/errors')
+const { getUnauthorizedError } = require('../utils/errors')
+const { verifyAccessToken } = require('../utils/auth')
+const cnf = require('../config')
 
 const protect = async (req, res, next) => {
-  const error = getAppError(StatusCodes.UNAUTHORIZED, getReasonPhrase(StatusCodes.UNAUTHORIZED))
+  const error = getUnauthorizedError()
   const access_token = req.header('Authorization')?.split(' ')[1] || ''
 
   try {
-    const payload = verify(access_token, process.env.ACCESS_SECRET)
+    const payload = verifyAccessToken(access_token, cnf.jwtAccessTokenSecret)
     if (!payload) {
       return next(error)
     }
@@ -21,7 +19,6 @@ const protect = async (req, res, next) => {
     req.auth = user
     next()
   } catch (err) {
-    log.error(err)
     return next(error)
   }
 }

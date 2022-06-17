@@ -5,7 +5,10 @@ The server is implemented as a Node.js/Express server using the Knex.js query bu
 ### Commands
 
 - Create migration: `npx knex --knexfile=./src/db/knexfile.js migrate:make <name>`
+- Run all migrations: `npx knex --knexfile ./src/db/knexfile.js migrate:latest`
+- Rollback all: `npx knex --knexfile ./src/db/knexfile.js migrate:rollback --all`
 - Create Seed: `npx knex --knexfile ./src/db/knexfile.js seed:make <name>`
+- Run Seed: `npx knex --knexfile=./src/db/knexfile.js seed:run`
 
 ### Dependencies
 

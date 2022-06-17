@@ -1,4 +1,4 @@
-const log = require('../utils/log')
+const log = require('../utils/logger')()
 
 /**
  * Generic Error Handling middleware. Will be called from controllers using next(e)

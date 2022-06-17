@@ -6,10 +6,18 @@ const dotenv = require('dotenv')
 dotenv.config({ path: path.join(__dirname, '..', '.env') })
 
 const ENV = process.env.NODE_ENV || 'development'
+const PORT = parseInt(process.env.PORT) || 8080
+const saltRounds = parseInt(process.env.SALT_ROUNDS) || 10
+const jwtAccessTokenSecret = process.env.JWT_ACCESS_TOKEN_SECRET
+const jwtRefreshTokenSecret = process.env.JWT_REFRESH_TOKEN_SECRET
 
 const config = {
   development: {
-    port: process.env.PORT || 3000,
+    port: PORT,
+    nodeEnv: ENV,
+    saltRounds,
+    jwtAccessTokenSecret,
+    jwtRefreshTokenSecret,
     log: {
       enabled: true,
       level: 'trace',
@@ -22,7 +30,11 @@ const config = {
     },
   },
   production: {
-    port: process.env.PORT || 3000,
+    port: PORT,
+    nodeEnv: ENV,
+    saltRounds,
+    jwtAccessTokenSecret,
+    jwtRefreshTokenSecret,
     log: {
       enabled: true,
       level: 'info',

@@ -1,11 +1,12 @@
 const express = require('express')
-const { Logoff, Logon, Refresh, Signup } = require('./auth.controller')
+
+const { logoff, logon, refreshAccessToken, signupUser } = require('./auth.handler')
 
 const router = express.Router()
 
-router.post('/signup', Signup)
-router.post('/logon', Logon)
-router.get('/refresh', Refresh)
-router.get('/logoff', Logoff)
+router.post('/logon', logon)
+router.get('/logoff', logoff)
+router.get('/refresh', refreshAccessToken)
+router.post('/signup', signupUser)
 
 module.exports = router

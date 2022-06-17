@@ -4,7 +4,6 @@
 const cookieParser = require('cookie-parser')
 const cors = require('cors')
 const express = require('express')
-require('express-async-errors') // async wrapper
 
 const notFoundMiddleware = require('./middleware/not-found')
 const errorMiddleware = require('./middleware/error-handler')

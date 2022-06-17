@@ -1,60 +1,101 @@
-const { hash } = require('bcryptjs')
-const { nanoid } = require('nanoid')
+const { hashPassword } = require('../../utils/auth')
+const { isEmail, isLength, trim } = require('validator')
 
-const db = require('../../db')
-const log = require('../../utils/log')
+const { findOne, insertOne } = require('../../utils/repository')
+const { getNotFoundError, getUnprocessableError } = require('../../utils/errors')
 
-const getUserById = async (id) => {
-  const rows = await db('users').select('id', 'name', 'email').where({ id })
-  return rows && rows.length ? rows[0] : null
+// const _dbToEntity = (dbData) => {
+//   const data = {
+//     id: dbData.id,
+//     name: dbData.name,
+//     email: dbData.email,
+//   }
+
+//   return data
+// }
+
+const _validateUser = async (userData = {}) => {
+  const errors = []
+  const data = {
+    name: userData.name ? trim(userData.name) : '',
+    email: userData.email ? trim(userData.email) : '',
+    password: userData.password ? trim(userData.password) : '',
+  }
+
+  const password_confirm = userData.password_confirm ? trim(userData.password_confirm) : ''
+  if (password_confirm !== data.password) {
+    errors.add('Passwords do not match')
+  }
+
+  if (!data.name) {
+    errors.add('A user needs to have a name')
+  }
+
+  if (!isEmail(data.email)) {
+    errors.add('A user needs to have a valid email address')
+  }
+
+  const isRegistered = await isUserRegistered(data.email)
+  if (isRegistered) {
+    errors.push(`Email ${data.email} is already registered`)
+  }
+
+  if (!isLength(data.password, { min: 8, max: 50 })) {
+    errors.add('Password should be between 8 and 50 characters long')
+  }
+
+  if (errors.length) {
+    return [errors, null]
+  } else {
+    return [null, data]
+  }
 }
 
-const createUser = async (data) => {
-  const { name, email, password } = data
-  const id = nanoid()
-  const pwd = await hash(password, 12)
-  await db('users').insert({
-    id,
-    name,
-    email,
-    password: pwd,
-  })
-
-  // Fetch and return created user
-  const user = await getUserById(id)
-  log.info(user, 'User service created user:')
+exports.getUserById = async (id) => {
+  const user = await findOne('users', ['id', 'name', 'email'], { id })
   return user
 }
 
+exports.createUser = async (bodyData) => {
+  const [errors, data] = await _validateUser(bodyData)
+  if (errors) {
+    throw getUnprocessableError(errors.join(','))
+  }
+
+  data.password = await hashPassword(data.password)
+  const newUser = await insertOne('users', data)
+  return newUser
+}
+
 const isUserRegistered = async (email) => {
-  const rows = await db('users').select('id').where({ email })
-  if (rows.length) {
+  const user = await findOne('users', ['id', 'name', 'email'], { email })
+  if (user) {
     return true
   }
   return false
 }
 
-const getUserByEmail = async (email) => {
-  const rows = await db('users').select('id', 'name', 'email').where({ email })
-  rows && rows.length ? rows[0] : null
-}
-
-const getUserByEmailWithPassword = async (email) => {
-  const rows = await db('users').select('id', 'name', 'email', 'password').where({ email })
-  return rows && rows.length ? rows[0] : null
-}
-
-const getUserProfile = async (id) => {
-  const user = await getUserById(id)
-  // Add profileinfo here
+exports.getUserByEmail = async (email) => {
+  const user = await findOne('users', ['id', 'name', 'email', 'isAdmin'], { email })
+  if (!user) {
+    throw getNotFoundError()
+  }
   return user
 }
 
-module.exports = {
-  createUser,
-  getUserByEmail,
-  getUserByEmailWithPassword,
-  getUserById,
-  getUserProfile,
-  isUserRegistered,
+exports.getUserByEmailWithPassword = async (email) => {
+  const user = await findOne('users', ['id', 'name', 'email', 'password', 'isAdmin'], { email })
+  if (!user) {
+    throw getNotFoundError()
+  }
+  return user
+}
+
+exports.getUserProfile = async (id) => {
+  const user = await exports.getUserById(id)
+  // Add profileinfo here
+  if (!user) {
+    throw getNotFoundError()
+  }
+  return user
 }

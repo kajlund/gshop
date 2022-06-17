@@ -1,67 +1,90 @@
-const { compare } = require('bcryptjs')
 const { isAfter } = require('date-fns')
-const { sign, verify } = require('jsonwebtoken')
 
-// const { byId, createUser, emailRegistered } = require('../user/user.service')
+const { getInternalServerError, getUnauthorizedError } = require('../../utils/errors')
+const { getUserByEmailWithPassword, createUser } = require('../user/user.service')
+const { generateAccessToken, generateRefreshToken, passwordsMatch, verifyRefreshToken } = require('../../utils/auth')
+const { destroyOne, findOne, insertOne, updateOne } = require('../../utils/repository')
+const log = require('../../utils/logger')()
 
-const db = require('../../db')
-const log = require('../../utils/log')
+const _getTokenPayload = (data) => {
+  return { id: data.id, isAdmin: data.isAdmin === 1 }
+}
 
-const getAccessToken = async (user) => sign({ id: user.id }, process.env.ACCESS_SECRET, { expiresIn: '30s' })
-
-const getRefreshToken = async (user) => {
-  const token = sign({ id: user.id }, process.env.REFRESH_SECRET, { expiresIn: '1w' })
+const _addTokenToDB = async (userId, token) => {
   const expired_at = new Date()
   expired_at.setDate(expired_at.getDate() + 7)
-
-  // Save refresh token in DB. Expires in oine week
-  await db('tokens').insert({ user_id: user.id, token, expired_at })
-  log.info(`Added refresh token: ${token}`)
-  return token
-}
-
-const passwordsMatch = async (pwd1, pwd2) => {
-  const pass = await compare(pwd1, pwd2)
-  return pass
-}
-
-const removeRefreshToken = async (token) => {
-  // Remove refresh token from DB (Logout)
-  const rows_affected = await db('tokens').where({ token }).del()
-  if (rows_affected !== 1) {
-    log.error(`removeRefreshToken: Delete for token ${token} returned ${rows_affected} rows.`)
-    return false
+  const oldToken = await findOne('tokens', [], { token })
+  if (!oldToken) {
+    await insertOne('tokens', { user_id: userId, token, expired_at })
+  } else {
+    await updateOne('tokens', { id: oldToken.id }, { expired_at })
   }
-  return true
 }
 
-const refreshAccessToken = async (cookie) => {
-  const payload = verify(cookie, process.env.REFRESH_SECRET)
+exports.logonUser = async (data) => {
+  const { email, password } = data
+  let accessToken, refreshToken
+  const user = await getUserByEmailWithPassword(email)
+  if (!user) {
+    throw getUnauthorizedError()
+  }
+
+  const pwdOK = await passwordsMatch(password, user.password)
+  if (!pwdOK) {
+    throw getUnauthorizedError()
+  }
+
+  const payload = _getTokenPayload(user)
+  accessToken = generateAccessToken(payload)
+  refreshToken = generateRefreshToken(payload)
+  await _addTokenToDB(user.id, refreshToken)
+  if (!accessToken || !refreshToken) {
+    throw getUnauthorizedError()
+  }
+
+  return { accessToken, refreshToken }
+}
+
+exports.logoffUser = async (token) => {
+  // Remove refresh token from DB (Logout)
+  if (token) {
+    const deleted = await destroyOne('tokens', { token })
+    if (deleted) {
+      log.info(`logoffUser: Deleted token ${token}`)
+    }
+  }
+}
+
+exports.refreshAccessToken = async (token) => {
+  const payload = verifyRefreshToken(token)
   if (!payload) {
-    log.error('Refresh token cookie verification failed')
-    return ''
+    throw getUnauthorizedError('Token verification failed')
   }
 
   // Also verify with DB
-  const rows = await db('tokens').select('id', 'expired_at').where('user_id', payload.id)
-  if (!rows.length) {
-    log.error(payload, 'Token could not be found in DB')
-    return ''
+  const resfreshToken = await findOne('tokens', '*', { token })
+  if (!resfreshToken) {
+    throw getInternalServerError('refreshAccessToken: Token could not be found in DB')
   }
 
-  const refreshToken = rows[0]
-  if (!refreshToken || !isAfter(refreshToken.expired_at, new Date())) {
-    log.error(refreshToken, 'Refresh token might have expired')
-    return ''
+  if (!isAfter(resfreshToken.expired_at, new Date())) {
+    throw getUnauthorizedError('Refresh token has expired')
   }
-
-  return sign({ id: payload.id }, process.env.ACCESS_SECRET, { expiresIn: '30s' })
+  const accessToken = generateAccessToken({ id: payload.id, isAdmin: payload.isAdmin })
+  return accessToken
 }
 
-module.exports = {
-  getAccessToken,
-  getRefreshToken,
-  passwordsMatch,
-  refreshAccessToken,
-  removeRefreshToken,
+exports.signupUser = async (data) => {
+  const user = await createUser(data)
+  // maybe logon after created?
+  const payload = _getTokenPayload(user)
+  const accessToken = generateAccessToken(payload)
+  const refreshToken = generateRefreshToken(payload)
+
+  await _addTokenToDB(user.id, refreshToken)
+  if (!accessToken || !refreshToken) {
+    throw getUnauthorizedError()
+  }
+
+  return { accessToken, refreshToken }
 }
